@@ -22,6 +22,7 @@ import android.widget.Toast;
 
 import com.yalantis.ucrop.UCrop;
 import com.yalantis.ucrop.UCropActivity;
+import com.yalantis.ucrop.model.AspectRatio;
 
 import java.io.File;
 import java.util.Locale;
@@ -317,6 +318,23 @@ public class SampleActivity extends BaseActivity {
             new AspectRatio("ASPECT", 1, 1));
 
        */
+
+        options.setAspectRatioOptions(0,
+                new AspectRatio("1", 1, 1),
+                new AspectRatio("2", 2, 1),
+                new AspectRatio("3", 3, 1),
+                new AspectRatio("4", 4, 1),
+                new AspectRatio("5", 5, 1),
+                new AspectRatio("6", 6, 1),
+                new AspectRatio("7", 7, 1),
+                new AspectRatio("8", 8, 1),
+                new AspectRatio("9", 9, 1),
+                new AspectRatio("10", 10, 1));
+
+        options.setAllowedGestures(UCropActivity.SCALE, UCropActivity.SCALE, UCropActivity.SCALE);
+
+        options.setCropGridColumnCount(0);
+        options.setCropGridRowCount(0);
 
         return uCrop.withOptions(options);
     }

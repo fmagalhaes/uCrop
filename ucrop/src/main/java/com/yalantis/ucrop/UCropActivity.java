@@ -402,7 +402,6 @@ public class UCropActivity extends AppCompatActivity {
     }
 
     private void setupAspectRatioWidget(@NonNull Intent intent) {
-
         int aspectRationSelectedByDefault = intent.getIntExtra(UCrop.Options.EXTRA_ASPECT_RATIO_SELECTED_BY_DEFAULT, 0);
         ArrayList<AspectRatio> aspectRatioList = intent.getParcelableArrayListExtra(UCrop.Options.EXTRA_ASPECT_RATIO_OPTIONS);
 
@@ -441,9 +440,15 @@ public class UCropActivity extends AppCompatActivity {
             cropAspectRatioView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    AspectRatioTextView aspectRatioTextView = ((AspectRatioTextView) ((ViewGroup) v).getChildAt(0));
+
                     mGestureCropImageView.setTargetAspectRatio(
-                            ((AspectRatioTextView) ((ViewGroup) v).getChildAt(0)).getAspectRatio(v.isSelected()));
+                            aspectRatioTextView.getAspectRatio(v.isSelected()));
                     mGestureCropImageView.setImageToWrapCropBounds();
+
+                    mOverlayView.setCropGridColumnCount(((int)aspectRatioTextView.getAspectRatioX()) - 1);
+                    mOverlayView.setCropGridRowCount(((int)aspectRatioTextView.getAspectRatioY()) - 1);
+
                     if (!v.isSelected()) {
                         for (ViewGroup cropAspectRatioView : mCropAspectRatioViews) {
                             cropAspectRatioView.setSelected(cropAspectRatioView == v);

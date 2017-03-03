@@ -160,4 +160,11 @@ public class AspectRatioTextView extends TextView {
         }
     }
 
+    public float getAspectRatioX() {
+        return mAspectRatioX;
+    }
+
+    public float getAspectRatioY() {
+        return mAspectRatioY;
+    }
 }
