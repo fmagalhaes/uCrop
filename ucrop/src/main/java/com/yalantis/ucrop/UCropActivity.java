@@ -84,9 +84,12 @@ public class UCropActivity extends AppCompatActivity {
     private int mStatusBarColor;
     private int mActiveWidgetColor;
     private int mToolbarWidgetColor;
-    @ColorInt private int mRootViewBackgroundColor;
-    @DrawableRes private int mToolbarCancelDrawable;
-    @DrawableRes private int mToolbarCropDrawable;
+    @ColorInt
+    private int mRootViewBackgroundColor;
+    @DrawableRes
+    private int mToolbarCancelDrawable;
+    @DrawableRes
+    private int mToolbarCropDrawable;
     private int mLogoColor;
 
     private boolean mShowBottomControls;
@@ -149,6 +152,12 @@ public class UCropActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+    }
+
+    @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         menu.findItem(R.id.menu_crop).setVisible(!mShowLoader);
         menu.findItem(R.id.menu_loader).setVisible(mShowLoader);
@@ -187,10 +196,12 @@ public class UCropActivity extends AppCompatActivity {
             } catch (Exception e) {
                 setResultError(e);
                 finish();
+                overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
             }
         } else {
             setResultError(new NullPointerException(getString(R.string.ucrop_error_input_data_is_absent)));
             finish();
+            overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
         }
     }
 
@@ -367,6 +378,7 @@ public class UCropActivity extends AppCompatActivity {
         public void onLoadFailure(@NonNull Exception e) {
             setResultError(e);
             finish();
+            overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
         }
 
     };
@@ -442,12 +454,16 @@ public class UCropActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     AspectRatioTextView aspectRatioTextView = ((AspectRatioTextView) ((ViewGroup) v).getChildAt(0));
 
+                    if(aspectRatioTextView.getAspectRatioY() > 1) {
+                        return;
+                    }
+
                     mGestureCropImageView.setTargetAspectRatio(
                             aspectRatioTextView.getAspectRatio(v.isSelected()));
                     mGestureCropImageView.setImageToWrapCropBounds();
 
-                    mOverlayView.setCropGridColumnCount(((int)aspectRatioTextView.getAspectRatioX()) - 1);
-                    mOverlayView.setCropGridRowCount(((int)aspectRatioTextView.getAspectRatioY()) - 1);
+                    mOverlayView.setCropGridColumnCount(((int) aspectRatioTextView.getAspectRatioX()) - 1);
+                    mOverlayView.setCropGridRowCount(((int) aspectRatioTextView.getAspectRatioY()) - 1);
 
                     if (!v.isSelected()) {
                         for (ViewGroup cropAspectRatioView : mCropAspectRatioViews) {
@@ -620,12 +636,14 @@ public class UCropActivity extends AppCompatActivity {
             public void onBitmapCropped(@NonNull Uri resultUri, int imageWidth, int imageHeight) {
                 setResultUri(resultUri, mGestureCropImageView.getTargetAspectRatio(), imageWidth, imageHeight);
                 finish();
+                overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
             }
 
             @Override
             public void onCropFailure(@NonNull Throwable t) {
                 setResultError(t);
                 finish();
+                overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
             }
         });
     }

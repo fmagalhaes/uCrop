@@ -1,1 +1,1 @@
-include ':ucrop'
+include ':sample',':ucrop'
