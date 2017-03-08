@@ -154,7 +154,7 @@ public class UCropActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+        overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
     }
 
     @Override
@@ -196,12 +196,12 @@ public class UCropActivity extends AppCompatActivity {
             } catch (Exception e) {
                 setResultError(e);
                 finish();
-                overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+                overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
             }
         } else {
             setResultError(new NullPointerException(getString(R.string.ucrop_error_input_data_is_absent)));
             finish();
-            overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+            overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
         }
     }
 
@@ -378,7 +378,7 @@ public class UCropActivity extends AppCompatActivity {
         public void onLoadFailure(@NonNull Exception e) {
             setResultError(e);
             finish();
-            overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+            overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
         }
 
     };
@@ -636,14 +636,14 @@ public class UCropActivity extends AppCompatActivity {
             public void onBitmapCropped(@NonNull Uri resultUri, int imageWidth, int imageHeight) {
                 setResultUri(resultUri, mGestureCropImageView.getTargetAspectRatio(), imageWidth, imageHeight);
                 finish();
-                overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+                overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
             }
 
             @Override
             public void onCropFailure(@NonNull Throwable t) {
                 setResultError(t);
                 finish();
-                overridePendingTransition(R.anim.alpha_0_from_100, R.anim.alpha_100_from_0);
+                overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
             }
         });
     }
