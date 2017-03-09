@@ -161,13 +161,14 @@ public class BitmapCropTask extends AsyncTask<Void, Void, Throwable> {
      * @return - true if image must be cropped, false - if original image fits requirements
      */
     private boolean shouldCrop(int width, int height) {
-        int pixelError = 1;
-        pixelError += Math.round(Math.max(width, height) / 1000f);
-        return (mMaxResultImageSizeX > 0 && mMaxResultImageSizeY > 0)
-                || Math.abs(mCropRect.left - mCurrentImageRect.left) > pixelError
-                || Math.abs(mCropRect.top - mCurrentImageRect.top) > pixelError
-                || Math.abs(mCropRect.bottom - mCurrentImageRect.bottom) > pixelError
-                || Math.abs(mCropRect.right - mCurrentImageRect.right) > pixelError;
+//        int pixelError = 1;
+//        pixelError += Math.round(Math.max(width, height) / 1000f);
+//        return (mMaxResultImageSizeX > 0 && mMaxResultImageSizeY > 0)
+//                || Math.abs(mCropRect.left - mCurrentImageRect.left) > pixelError
+//                || Math.abs(mCropRect.top - mCurrentImageRect.top) > pixelError
+//                || Math.abs(mCropRect.bottom - mCurrentImageRect.bottom) > pixelError
+//                || Math.abs(mCropRect.right - mCurrentImageRect.right) > pixelError;
+        return true;
     }
 
     @SuppressWarnings("JniMissingFunction")

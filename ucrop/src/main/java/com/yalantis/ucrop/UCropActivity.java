@@ -454,12 +454,8 @@ public class UCropActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     AspectRatioTextView aspectRatioTextView = ((AspectRatioTextView) ((ViewGroup) v).getChildAt(0));
 
-                    if(aspectRatioTextView.getAspectRatioY() > 1) {
-                        return;
-                    }
-
                     mGestureCropImageView.setTargetAspectRatio(
-                            aspectRatioTextView.getAspectRatio(v.isSelected()));
+                            aspectRatioTextView.getAspectRatio(false));
                     mGestureCropImageView.setImageToWrapCropBounds();
 
                     mOverlayView.setCropGridColumnCount(((int) aspectRatioTextView.getAspectRatioX()) - 1);
