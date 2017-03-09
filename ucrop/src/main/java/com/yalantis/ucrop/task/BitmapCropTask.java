@@ -14,6 +14,7 @@ import com.yalantis.ucrop.callback.BitmapCropCallback;
 import com.yalantis.ucrop.model.CropParameters;
 import com.yalantis.ucrop.model.ExifInfo;
 import com.yalantis.ucrop.model.ImageState;
+import com.yalantis.ucrop.model.Resolution;
 import com.yalantis.ucrop.util.FileUtils;
 import com.yalantis.ucrop.util.ImageHeaderParser;
 
@@ -133,6 +134,13 @@ public class BitmapCropTask extends AsyncTask<Void, Void, Throwable> {
         int left = Math.round((mCropRect.left - mCurrentImageRect.left) / mCurrentScale);
         mCroppedImageWidth = Math.round(mCropRect.width() / mCurrentScale);
         mCroppedImageHeight = Math.round(mCropRect.height() / mCurrentScale);
+
+        Resolution resolution = new Resolution(mCroppedImageWidth, mCroppedImageHeight);
+        if(resolution.isValid() && !resolution.isInstagramSquareResolutionSupported()) {
+            float ratio = (float) Math.round(resolution.getRatio());
+
+            resolution = Resolution.withRatioFromWidth(ratio, mCroppedImageWidth);
+        }
 
         boolean shouldCrop = shouldCrop(mCroppedImageWidth, mCroppedImageHeight);
         Log.i(TAG, "Should crop: " + shouldCrop);
