@@ -139,7 +139,10 @@ public class BitmapCropTask extends AsyncTask<Void, Void, Throwable> {
         if(resolution.isValid() && !resolution.isInstagramSquareResolutionSupported()) {
             float ratio = (float) Math.round(resolution.getRatio());
 
-            resolution = Resolution.withRatioFromWidth(ratio, mCroppedImageWidth);
+            resolution = Resolution.withRatiofromHeight(ratio, mCroppedImageHeight);
+
+            mCroppedImageWidth = resolution.getWidth();
+            mCroppedImageHeight = resolution.getHeight();
         }
 
         boolean shouldCrop = shouldCrop(mCroppedImageWidth, mCroppedImageHeight);
