@@ -61,7 +61,7 @@ public class Resolution {
         return mWidth + "x" + mHeight + "; ratio: " + getRatio() + "; is: " + isInstagramSquareResolutionSupported();
     }
 
-    public static Resolution withRatiofromHeight(float ratio, int height) {
+    public static Resolution withRatioFromHeight(float ratio, int height) {
         return new Resolution(height * ratio, height);
     }
 
