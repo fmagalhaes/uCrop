@@ -35,6 +35,7 @@ import android.widget.TextView;
 
 import com.yalantis.ucrop.callback.BitmapCropCallback;
 import com.yalantis.ucrop.model.AspectRatio;
+import com.yalantis.ucrop.util.AnimationUtils;
 import com.yalantis.ucrop.util.SelectedStateListDrawable;
 import com.yalantis.ucrop.view.CropImageView;
 import com.yalantis.ucrop.view.GestureCropImageView;
@@ -154,7 +155,7 @@ public class UCropActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
+        AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
     }
 
     @Override
@@ -196,12 +197,12 @@ public class UCropActivity extends AppCompatActivity {
             } catch (Exception e) {
                 setResultError(e);
                 finish();
-                overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
+                AnimationUtils.overridePendingTransitionForFinishActivity(this);
             }
         } else {
             setResultError(new NullPointerException(getString(R.string.ucrop_error_input_data_is_absent)));
             finish();
-            overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
+            AnimationUtils.overridePendingTransitionForFinishActivity(this);
         }
     }
 
@@ -378,9 +379,8 @@ public class UCropActivity extends AppCompatActivity {
         public void onLoadFailure(@NonNull Exception e) {
             setResultError(e);
             finish();
-            overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
+            AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
         }
-
     };
 
     /**
@@ -632,14 +632,14 @@ public class UCropActivity extends AppCompatActivity {
             public void onBitmapCropped(@NonNull Uri resultUri, int imageWidth, int imageHeight) {
                 setResultUri(resultUri, mGestureCropImageView.getTargetAspectRatio(), imageWidth, imageHeight);
                 finish();
-                overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
+                AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
             }
 
             @Override
             public void onCropFailure(@NonNull Throwable t) {
                 setResultError(t);
                 finish();
-                overridePendingTransition(R.anim.ucrop_alpha_0_from_100, R.anim.ucrop_alpha_100_from_0);
+                AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
             }
         });
     }
