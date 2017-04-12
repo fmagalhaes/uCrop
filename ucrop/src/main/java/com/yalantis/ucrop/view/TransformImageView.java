@@ -54,6 +54,8 @@ public class TransformImageView extends ImageView {
     private String mImageInputPath, mImageOutputPath;
     private ExifInfo mExifInfo;
 
+    private BitmapLoadCallback mBitmapLoadCallback;
+
     /**
      * Interface for rotation and scale change notifying.
      */
@@ -149,6 +151,10 @@ public class TransformImageView extends ImageView {
 
                         mBitmapDecoded = true;
                         setImageBitmap(bitmap);
+
+                        if(mBitmapLoadCallback != null) {
+                            mBitmapLoadCallback.onBitmapLoaded(bitmap, exifInfo, imageInputPath, imageOutputPath);
+                        }
                     }
 
                     @Override
@@ -156,6 +162,9 @@ public class TransformImageView extends ImageView {
                         Log.e(TAG, "onFailure: setImageUri", bitmapWorkerException);
                         if (mTransformImageListener != null) {
                             mTransformImageListener.onLoadFailure(bitmapWorkerException);
+                        }
+                        if(mBitmapLoadCallback != null) {
+                            mBitmapLoadCallback.onFailure(bitmapWorkerException);
                         }
                     }
                 });
@@ -336,4 +345,7 @@ public class TransformImageView extends ImageView {
         mCurrentImageMatrix.mapPoints(mCurrentImageCenter, mInitialImageCenter);
     }
 
+    public void setBitmapLoadCallback(BitmapLoadCallback bitmapLoadCallback) {
+        mBitmapLoadCallback = bitmapLoadCallback;
+    }
 }

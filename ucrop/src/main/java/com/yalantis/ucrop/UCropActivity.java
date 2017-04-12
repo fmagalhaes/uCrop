@@ -3,6 +3,7 @@ package com.yalantis.ucrop;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
@@ -14,9 +15,11 @@ import android.support.annotation.DrawableRes;
 import android.support.annotation.IdRes;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.graphics.Palette;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
@@ -33,9 +36,11 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.muffin.shared.utils.AnimationUtils;
 import com.yalantis.ucrop.callback.BitmapCropCallback;
+import com.yalantis.ucrop.callback.BitmapLoadCallback;
 import com.yalantis.ucrop.model.AspectRatio;
-import com.yalantis.ucrop.util.AnimationUtils;
+import com.yalantis.ucrop.model.ExifInfo;
 import com.yalantis.ucrop.util.SelectedStateListDrawable;
 import com.yalantis.ucrop.view.CropImageView;
 import com.yalantis.ucrop.view.GestureCropImageView;
@@ -350,6 +355,7 @@ public class UCropActivity extends AppCompatActivity {
         mOverlayView = mUCropView.getOverlayView();
 
         mGestureCropImageView.setTransformImageListener(mImageListener);
+        mGestureCropImageView.setBitmapLoadCallback(mBitmapLoadCallback);
 
         ((ImageView) findViewById(R.id.image_view_logo)).setColorFilter(mLogoColor, PorterDuff.Mode.SRC_ATOP);
 
@@ -380,6 +386,53 @@ public class UCropActivity extends AppCompatActivity {
             setResultError(e);
             finish();
             AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
+        }
+    };
+
+    private BitmapLoadCallback mBitmapLoadCallback = new BitmapLoadCallback() {
+        @Override
+        public void onBitmapLoaded(@NonNull Bitmap bitmap, @NonNull ExifInfo exifInfo, @NonNull String imageInputPath, @Nullable String imageOutputPath) {
+            if (bitmap != null && !bitmap.isRecycled()) {
+                Palette.from(bitmap).generate(new Palette.PaletteAsyncListener() {
+                    @Override
+                    public void onGenerated(Palette palette) {
+                        Palette.Swatch darkMutedSwatch = palette.getDarkMutedSwatch();
+
+                        if (darkMutedSwatch != null) {
+                            mToolbarColor = darkMutedSwatch.getRgb();
+                            mStatusBarColor = manipulateColor(darkMutedSwatch.getRgb(), 0.8f);
+
+                            setupAppBar();
+                        }
+
+                        Palette.Swatch mutedSwatch = palette.getMutedSwatch();
+                        if(mutedSwatch != null) {
+                            mActiveWidgetColor = mutedSwatch.getRgb();
+
+                            setupAspectRatioWidgetColor();
+                            setupRotateWidgetColor();
+                            setupScaleWidgetColor();
+                            setupStatesWrapper();
+                        }
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void onFailure(@NonNull Exception bitmapWorkerException) {
+
+        }
+
+        public int manipulateColor(int color, float factor) {
+            int a = Color.alpha(color);
+            int r = Math.round(Color.red(color) * factor);
+            int g = Math.round(Color.green(color) * factor);
+            int b = Math.round(Color.blue(color) * factor);
+            return Color.argb(a,
+                    Math.min(r, 255),
+                    Math.min(g, 255),
+                    Math.min(b, 255));
         }
     };
 
@@ -471,6 +524,16 @@ public class UCropActivity extends AppCompatActivity {
         }
     }
 
+    private void setupAspectRatioWidgetColor() {
+        for (ViewGroup aspectRatioView : mCropAspectRatioViews) {
+            View view = aspectRatioView.getChildAt(0);
+
+            if (view instanceof AspectRatioTextView) {
+                ((AspectRatioTextView) view).setActiveColor(mActiveWidgetColor);
+            }
+        }
+    }
+
     private void setupRotateWidget() {
         mTextViewRotateAngle = ((TextView) findViewById(R.id.text_view_rotate));
         ((HorizontalProgressWheelView) findViewById(R.id.rotate_scroll_wheel))
@@ -491,8 +554,7 @@ public class UCropActivity extends AppCompatActivity {
                     }
                 });
 
-        ((HorizontalProgressWheelView) findViewById(R.id.rotate_scroll_wheel)).setMiddleLineColor(mActiveWidgetColor);
-
+        setupRotateWidgetColor();
 
         findViewById(R.id.wrapper_reset_rotate).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -506,6 +568,10 @@ public class UCropActivity extends AppCompatActivity {
                 rotateByAngle(90);
             }
         });
+    }
+
+    private void setupRotateWidgetColor() {
+        ((HorizontalProgressWheelView) findViewById(R.id.rotate_scroll_wheel)).setMiddleLineColor(mActiveWidgetColor);
     }
 
     private void setupScaleWidget() {
@@ -533,6 +599,10 @@ public class UCropActivity extends AppCompatActivity {
                         mGestureCropImageView.cancelAllAnimations();
                     }
                 });
+        setupScaleWidgetColor();
+    }
+
+    private void setupScaleWidgetColor() {
         ((HorizontalProgressWheelView) findViewById(R.id.scale_scroll_wheel)).setMiddleLineColor(mActiveWidgetColor);
     }
 

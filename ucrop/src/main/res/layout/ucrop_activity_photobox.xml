@@ -13,14 +13,16 @@
         android:background="@color/ucrop_color_toolbar"
         android:minHeight="?attr/actionBarSize">
 
-        <TextView
+        <com.muffin.shared.views.TextViewPlus
             android:id="@+id/toolbar_title"
             style="@style/TextAppearance.Widget.AppCompat.Toolbar.Title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="@string/ucrop_label_edit_photo"
-            android:textColor="@color/ucrop_color_toolbar_widget"/>
+            android:textColor="@color/ucrop_color_toolbar_widget"
+            app:fontName="@string/font_pacifico"
+            />
 
     </android.support.v7.widget.Toolbar>
 

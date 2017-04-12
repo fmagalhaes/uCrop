@@ -5,7 +5,7 @@ android {
     buildToolsVersion '25.0.2'
 
     defaultConfig {
-        minSdkVersion 14
+        minSdkVersion 19
         targetSdkVersion 25
         versionCode 22
         versionName "2.2.0-native"
@@ -39,6 +39,8 @@ def isReleaseBuild() {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:25.2.0'
+    compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.squareup.okhttp3:okhttp:3.4.1'
+    compile 'com.android.support:palette-v7:25.3.1'
+    compile project(':shared')
 }
