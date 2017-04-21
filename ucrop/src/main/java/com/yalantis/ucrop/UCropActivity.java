@@ -421,7 +421,6 @@ public class UCropActivity extends AppCompatActivity {
 
         @Override
         public void onFailure(@NonNull Exception bitmapWorkerException) {
-
         }
 
         public int manipulateColor(int color, float factor) {
@@ -444,9 +443,9 @@ public class UCropActivity extends AppCompatActivity {
         ImageView stateRotateImageView = (ImageView) findViewById(R.id.image_view_state_rotate);
         ImageView stateAspectRatioImageView = (ImageView) findViewById(R.id.image_view_state_aspect_ratio);
 
-        stateScaleImageView.setImageDrawable(new SelectedStateListDrawable(stateScaleImageView.getDrawable(), mActiveWidgetColor));
-        stateRotateImageView.setImageDrawable(new SelectedStateListDrawable(stateRotateImageView.getDrawable(), mActiveWidgetColor));
-        stateAspectRatioImageView.setImageDrawable(new SelectedStateListDrawable(stateAspectRatioImageView.getDrawable(), mActiveWidgetColor));
+        stateScaleImageView.setImageDrawable(new SelectedStateListDrawable(stateScaleImageView.getResources().getDrawable(R.drawable.ucrop_ic_scale), mActiveWidgetColor));
+        stateRotateImageView.setImageDrawable(new SelectedStateListDrawable(stateScaleImageView.getResources().getDrawable(R.drawable.ucrop_ic_rotate), mActiveWidgetColor));
+        stateAspectRatioImageView.setImageDrawable(new SelectedStateListDrawable(stateScaleImageView.getResources().getDrawable(R.drawable.ucrop_ic_crop), mActiveWidgetColor));
     }
 
 
@@ -726,5 +725,4 @@ public class UCropActivity extends AppCompatActivity {
     protected void setResultError(Throwable throwable) {
         setResult(UCrop.RESULT_ERROR, new Intent().putExtra(UCrop.EXTRA_ERROR, throwable));
     }
-
 }
