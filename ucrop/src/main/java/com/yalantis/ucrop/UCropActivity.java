@@ -55,6 +55,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
@@ -396,18 +397,37 @@ public class UCropActivity extends AppCompatActivity {
                 Palette.from(bitmap).generate(new Palette.PaletteAsyncListener() {
                     @Override
                     public void onGenerated(Palette palette) {
-                        Palette.Swatch darkMutedSwatch = palette.getDarkMutedSwatch();
+                        Palette.Swatch darkSwatch;
+                        Palette.Swatch normalSwatch;
 
-                        if (darkMutedSwatch != null) {
-                            mToolbarColor = darkMutedSwatch.getRgb();
-                            mStatusBarColor = manipulateColor(darkMutedSwatch.getRgb(), 0.8f);
+                        boolean isMuted = new Random().nextBoolean();
+
+                        if(isMuted) {
+                            darkSwatch = palette.getDarkMutedSwatch();
+                            normalSwatch = palette.getMutedSwatch();
+
+                            if(darkSwatch == null && normalSwatch == null) {
+                                darkSwatch = palette.getDarkVibrantSwatch();
+                                normalSwatch = palette.getVibrantSwatch();
+                            }
+                        } else {
+                            darkSwatch = palette.getDarkVibrantSwatch();
+                            normalSwatch = palette.getVibrantSwatch();
+
+                            if(darkSwatch == null && normalSwatch == null) {
+                                darkSwatch = palette.getDarkMutedSwatch();
+                                normalSwatch = palette.getMutedSwatch();
+                            }
+                        }
+
+                        if (darkSwatch != null) {
+                            mToolbarColor = darkSwatch.getRgb();
+                            mStatusBarColor = manipulateColor(darkSwatch.getRgb(), 0.8f);
 
                             setupAppBar();
                         }
-
-                        Palette.Swatch mutedSwatch = palette.getMutedSwatch();
-                        if(mutedSwatch != null) {
-                            mActiveWidgetColor = mutedSwatch.getRgb();
+                        if(normalSwatch != null) {
+                            mActiveWidgetColor = normalSwatch.getRgb();
 
                             setupAspectRatioWidgetColor();
                             setupRotateWidgetColor();
