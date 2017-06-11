@@ -37,6 +37,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.muffin.shared.utils.AnimationUtils;
+import com.muffin.shared.utils.FileUtils;
 import com.yalantis.ucrop.callback.BitmapCropCallback;
 import com.yalantis.ucrop.callback.BitmapLoadCallback;
 import com.yalantis.ucrop.model.AspectRatio;
@@ -63,6 +64,7 @@ import java.util.Random;
 
 @SuppressWarnings("ConstantConditions")
 public class UCropActivity extends AppCompatActivity {
+    private static final int PREVIEW_REQUEST_CODE = 124;
 
     public static final int DEFAULT_COMPRESS_QUALITY = 90;
     public static final Bitmap.CompressFormat DEFAULT_COMPRESS_FORMAT = Bitmap.CompressFormat.JPEG;
@@ -719,9 +721,11 @@ public class UCropActivity extends AppCompatActivity {
 
             @Override
             public void onBitmapCropped(@NonNull Uri resultUri, int imageWidth, int imageHeight) {
-                setResultUri(resultUri, mGestureCropImageView.getTargetAspectRatio(), imageWidth, imageHeight);
-                finish();
-                AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
+                PreviewActivity.launchActivityForResult(UCropActivity.this, resultUri, mGestureCropImageView.getTargetAspectRatio(), imageWidth, imageHeight, PREVIEW_REQUEST_CODE);
+                AnimationUtils.overridePendingTransitionForOnStartActivity(UCropActivity.this);
+//                setResultUri(resultUri, mGestureCropImageView.getTargetAspectRatio(), imageWidth, imageHeight);
+//                finish();
+//                AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
             }
 
             @Override
@@ -744,5 +748,26 @@ public class UCropActivity extends AppCompatActivity {
 
     protected void setResultError(Throwable throwable) {
         setResult(UCrop.RESULT_ERROR, new Intent().putExtra(UCrop.EXTRA_ERROR, throwable));
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == PREVIEW_REQUEST_CODE) {
+            if(resultCode == RESULT_OK) {
+                Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
+                float resultAspectRatio = data.getFloatExtra(PreviewActivity.EXTRA_RESULT_ASPECT_RATIO, 1);
+                int imageWidth = data.getIntExtra(PreviewActivity.EXTRA_IMAGE_WIDTH, 0);
+                int imageHeight = data.getIntExtra(PreviewActivity.EXTRA_IMAGE_HEIGHT, 0);
+
+                setResultUri(uri, resultAspectRatio, imageWidth, imageHeight);
+                finish();
+                AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
+            } else if(resultCode == RESULT_CANCELED) {
+                Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
+
+                FileUtils.deleteDir(uri.getPath())
+            }
+        }
     }
 }

@@ -14,7 +14,7 @@ import com.yalantis.ucrop.callback.BitmapCropCallback;
 import com.yalantis.ucrop.model.CropParameters;
 import com.yalantis.ucrop.model.ExifInfo;
 import com.yalantis.ucrop.model.ImageState;
-import com.yalantis.ucrop.model.Resolution;
+import com.muffin.shared.models.Resolution;
 import com.yalantis.ucrop.util.FileUtils;
 import com.yalantis.ucrop.util.ImageHeaderParser;
 
