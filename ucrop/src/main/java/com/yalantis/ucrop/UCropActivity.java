@@ -747,23 +747,27 @@ public class UCropActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == PREVIEW_REQUEST_CODE) {
             if(resultCode == RESULT_OK) {
-                Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
-                float resultAspectRatio = data.getFloatExtra(PreviewActivity.EXTRA_RESULT_ASPECT_RATIO, 1);
-                int imageWidth = data.getIntExtra(PreviewActivity.EXTRA_IMAGE_WIDTH, 0);
-                int imageHeight = data.getIntExtra(PreviewActivity.EXTRA_IMAGE_HEIGHT, 0);
+                if(data != null) {
+                    Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
+                    float resultAspectRatio = data.getFloatExtra(PreviewActivity.EXTRA_RESULT_ASPECT_RATIO, 1);
+                    int imageWidth = data.getIntExtra(PreviewActivity.EXTRA_IMAGE_WIDTH, 0);
+                    int imageHeight = data.getIntExtra(PreviewActivity.EXTRA_IMAGE_HEIGHT, 0);
 
-                setResultUri(uri, resultAspectRatio, imageWidth, imageHeight);
+                    setResultUri(uri, resultAspectRatio, imageWidth, imageHeight);
+                }
                 finish();
                 AnimationUtils.overridePendingTransitionForFinishActivity(UCropActivity.this);
             } else if(resultCode == RESULT_CANCELED) {
-                Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
+                if(data != null) {
+                    Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
 
-                File file = new File(uri.getPath());
-                if(file.exists()) {
-                    file.delete();
-                } else {
-                    if(Fabric.isInitialized()) {
-                        Crashlytics.logException(new Exception("File doesn't exist"));
+                    File file = new File(uri.getPath());
+                    if (file.exists()) {
+                        file.delete();
+                    } else {
+                        if (Fabric.isInitialized()) {
+                            Crashlytics.logException(new Exception("File doesn't exist"));
+                        }
                     }
                 }
 

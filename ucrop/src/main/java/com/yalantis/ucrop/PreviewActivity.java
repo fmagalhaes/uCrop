@@ -3,8 +3,8 @@ package com.yalantis.ucrop;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Animatable;
@@ -14,6 +14,8 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.ColorInt;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
@@ -26,15 +28,20 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
 import com.muffin.shared.activities.base.BaseActivity;
 import com.muffin.shared.models.Resolution;
 import com.muffin.shared.utils.AnimationUtils;
+import com.muffin.shared.utils.BitmapUtils;
 import com.muffin.shared.utils.CrossfadeDrawable;
 import com.muffin.shared.utils.ImageCropperManager;
 import com.rd.PageIndicatorView;
 import com.yalantis.ucrop.adapters.PreviewImagesPagerAdapter;
+import com.yalantis.ucrop.callback.BitmapLoadCallback;
+import com.yalantis.ucrop.model.ExifInfo;
+import com.yalantis.ucrop.util.BitmapLoadUtils;
 
 import java.util.List;
 
@@ -64,6 +71,7 @@ public class PreviewActivity extends BaseActivity {
 
     private @ColorInt int[] mSwatchesColors;
     private CrossfadeDrawable[] mCrossfadeDrawables;
+    private int mMaxBitmapSize;
 
     public static void launchActivityForResult(Activity activity, Uri imageToPreview, float resultAspectRatio, int imageWidth, int imageHeight, int requestCode) {
         Intent intent = new Intent(activity, PreviewActivity.class);
@@ -106,81 +114,116 @@ public class PreviewActivity extends BaseActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mProgressBar.setIndeterminateTintList(ColorStateList.valueOf(Color.WHITE));
         }
+
+        System.gc();
         mProgressBar.setVisibility(View.VISIBLE);
-        new Thread(new Runnable() {
+        Resolution resolution = BitmapUtils.getResolutionOfBitmapUri(mImageToPreviewUri);
+        int squaresCount = ImageCropperManager.getSquareWidthCountForResolution(resolution);
+        int maxBitmapSize = Math.min(getMaxBitmapSize(), getScreenWidth()) * squaresCount;
+        BitmapLoadUtils.decodeBitmapInBackground(this, mImageToPreviewUri, mImageToPreviewUri, maxBitmapSize, maxBitmapSize, new BitmapLoadCallback() {
             @Override
-            public void run() {
-                Bitmap imageBitmap = BitmapFactory.decodeFile(mImageToPreviewUri.getPath());
-                Resolution imageResolution = new Resolution(imageBitmap);
-
-                int count = ImageCropperManager.getSquareWidthCountForResolution(imageResolution);
-
-                mSwatchesColors = new int[count];
-                mCrossfadeDrawables = new CrossfadeDrawable[count - 1];
-
-                final List<BitmapDrawable> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count, getResources());
-                for (int index = 0; index < bitmapList.size(); index++) {
-                    final Bitmap bitmap = bitmapList.get(index).getBitmap();
-
-                    if (bitmap != null && !bitmap.isRecycled()) {
-                        Palette palette = Palette.from(bitmap).generate();
-
-                        Palette.Swatch darkSwatch = palette.getDarkVibrantSwatch();
-                        if (darkSwatch == null) {
-                            darkSwatch = palette.getDarkMutedSwatch();
-                        }
-
-                        if(darkSwatch != null) {
-                            mSwatchesColors[index] = darkSwatch.getRgb();
-                        } else {
-                            mSwatchesColors[index] = mPanoramaCropColor;
-                        }
-
-                        if (index > 0) {
-                            if (mCrossfadeDrawables[index - 1] == null) {
-                                mCrossfadeDrawables[index - 1] = new CrossfadeDrawable();
-
-                                int baseColor = mSwatchesColors[index - 1];
-                                int fadingColor = mSwatchesColors[index];
-
-                                mCrossfadeDrawables[index - 1].setBase(new ColorDrawable(baseColor));
-                                mCrossfadeDrawables[index - 1].setFading(new ColorDrawable(fadingColor));
-                            }
-                        }
-                    }
-                }
-
-                runOnUiThread(new Runnable() {
+            public void onBitmapLoaded(final @NonNull Bitmap imageBitmap, @NonNull ExifInfo exifInfo, @NonNull String imageInputPath, @Nullable String imageOutputPath) {
+                new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        mImagesPagerAdapter = new PreviewImagesPagerAdapter<>(bitmapList);
-                        mViewPager.setAdapter(mImagesPagerAdapter);
-                        mPageIndicator.setCount(bitmapList.size());
-                        mPageIndicator.setVisibility(View.VISIBLE);
+                        Resolution imageResolution = new Resolution(imageBitmap);
 
-                        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-                            @Override
-                            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                                if (position < mCrossfadeDrawables.length) {
-                                    mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
+                        int count = ImageCropperManager.getSquareWidthCountForResolution(imageResolution);
+
+                        mSwatchesColors = new int[count];
+                        mCrossfadeDrawables = new CrossfadeDrawable[count - 1];
+
+                        try {
+                            final List<BitmapDrawable> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count, getResources());
+                            for (int index = 0; index < bitmapList.size(); index++) {
+                                final Bitmap bitmap = bitmapList.get(index).getBitmap();
+
+                                if (bitmap != null && !bitmap.isRecycled()) {
+                                    Palette palette = Palette.from(bitmap).generate();
+
+                                    Palette.Swatch darkSwatch = palette.getDarkVibrantSwatch();
+                                    if (darkSwatch == null) {
+                                        darkSwatch = palette.getDarkMutedSwatch();
+                                    }
+
+                                    if(darkSwatch != null) {
+                                        mSwatchesColors[index] = darkSwatch.getRgb();
+                                    } else {
+                                        mSwatchesColors[index] = mPanoramaCropColor;
+                                    }
+
+                                    if (index > 0) {
+                                        if (mCrossfadeDrawables[index - 1] == null) {
+                                            mCrossfadeDrawables[index - 1] = new CrossfadeDrawable();
+
+                                            int baseColor = mSwatchesColors[index - 1];
+                                            int fadingColor = mSwatchesColors[index];
+
+                                            mCrossfadeDrawables[index - 1].setBase(new ColorDrawable(baseColor));
+                                            mCrossfadeDrawables[index - 1].setFading(new ColorDrawable(fadingColor));
+                                        }
+                                    }
                                 }
                             }
 
-                            @Override
-                            public void onPageSelected(int position) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mImagesPagerAdapter = new PreviewImagesPagerAdapter<>(bitmapList);
+                                    mViewPager.setAdapter(mImagesPagerAdapter);
+                                    mPageIndicator.setCount(bitmapList.size());
+                                    mPageIndicator.setVisibility(View.VISIBLE);
+
+                                    mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+                                        @Override
+                                        public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                                            if (position < mCrossfadeDrawables.length) {
+                                                mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onPageSelected(int position) {
+                                        }
+
+                                        @Override
+                                        public void onPageScrollStateChanged(int state) {
+
+                                        }
+                                    });
+
+                                    mProgressBar.setVisibility(View.GONE);
+                                }
+                            });
+                        } catch (OutOfMemoryError e) {
+                            if(Fabric.isInitialized()) {
+                                Crashlytics.logException(e);
                             }
 
-                            @Override
-                            public void onPageScrollStateChanged(int state) {
+                            Toast.makeText(PreviewActivity.this, getString(R.string.dialog_error_message_outofmemoryerror), Toast.LENGTH_SHORT).show();
 
-                            }
-                        });
-
-                        mProgressBar.setVisibility(View.GONE);
+                            setResultUriOk();
+                            finish();
+                            AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
+                        }
                     }
-                });
+                }).start();
             }
-        }).start();
+
+            @Override
+            public void onFailure(@NonNull Exception bitmapWorkerException) {
+                if(Fabric.isInitialized()) {
+                    Crashlytics.logException(bitmapWorkerException);
+                }
+
+                //TODO: Show Error!
+                mProgressBar.setVisibility(View.GONE);
+
+                setResultUriOk();
+                finish();
+                AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
+            }
+        });
     }
 
     private void setResultUriOk() {
@@ -315,5 +358,16 @@ public class PreviewActivity extends BaseActivity {
             result = getResources().getDimensionPixelSize(resourceId);
         }
         return result;
+    }
+
+    public static int getScreenWidth() {
+        return Resources.getSystem().getDisplayMetrics().widthPixels;
+    }
+
+    public int getMaxBitmapSize() {
+        if (mMaxBitmapSize <= 0) {
+            mMaxBitmapSize = BitmapLoadUtils.calculateMaxBitmapSize(this);
+        }
+        return mMaxBitmapSize;
     }
 }
