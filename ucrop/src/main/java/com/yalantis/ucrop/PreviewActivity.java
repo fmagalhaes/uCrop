@@ -1,10 +1,11 @@
 package com.yalantis.ucrop;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.BitmapDrawable;
@@ -21,9 +22,9 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
-import android.view.WindowManager;
+import android.view.View;
 import android.widget.FrameLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.crashlytics.android.Crashlytics;
@@ -34,7 +35,6 @@ import com.muffin.shared.utils.CrossfadeDrawable;
 import com.muffin.shared.utils.ImageCropperManager;
 import com.rd.PageIndicatorView;
 import com.yalantis.ucrop.adapters.PreviewImagesPagerAdapter;
-import com.yalantis.ucrop.view.ImageViewWithLoading;
 
 import java.util.List;
 
@@ -50,16 +50,19 @@ public class PreviewActivity extends BaseActivity {
     public static final String EXTRA_IMAGE_WIDTH = "extra_image_width";
     public static final String EXTRA_IMAGE_HEIGHT = "extra_image_height";
 
+    private @ColorInt int mPanoramaCropColor;
+
     private FrameLayout mToolbarContainerFrameLayout;
     private Toolbar mToolbar;
     private ViewPager mViewPager;
     private PageIndicatorView mPageIndicator;
+    private ProgressBar mProgressBar;
 
-    private PreviewImagesPagerAdapter mImagesPagerAdapter;
+    private PreviewImagesPagerAdapter<BitmapDrawable> mImagesPagerAdapter;
 
     private Uri mImageToPreviewUri;
 
-    private Palette.Swatch[] mSwatches;
+    private @ColorInt int[] mSwatchesColors;
     private CrossfadeDrawable[] mCrossfadeDrawables;
 
     public static void launchActivityForResult(Activity activity, Uri imageToPreview, float resultAspectRatio, int imageWidth, int imageHeight, int requestCode) {
@@ -89,112 +92,75 @@ public class PreviewActivity extends BaseActivity {
         initAppBar();
         mViewPager = (ViewPager) findViewById(R.id.viewpager);
         mPageIndicator = (PageIndicatorView) findViewById(R.id.pageIndicatorView);
+        mProgressBar = (ProgressBar) findViewById(R.id.progressbar);
     }
 
     @Override
     protected void populateViews() {
+        mPanoramaCropColor = getResources().getColor(R.color.colorAccent);
+
+        mPageIndicator.setVisibility(View.INVISIBLE);
         mPageIndicator.setScaleFactor(0.75f);
         mPageIndicator.setPadding(6);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mProgressBar.setIndeterminateTintList(ColorStateList.valueOf(Color.WHITE));
+        }
+        mProgressBar.setVisibility(View.VISIBLE);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Bitmap imageBitmap = BitmapFactory.decodeFile(mImageToPreviewUri.getPath());
                 Resolution imageResolution = new Resolution(imageBitmap);
 
-                final int count = ImageCropperManager.getSquareWidthCountForResolution(imageResolution);
+                int count = ImageCropperManager.getSquareWidthCountForResolution(imageResolution);
 
-                mSwatches = new Palette.Swatch[count];
+                mSwatchesColors = new int[count];
                 mCrossfadeDrawables = new CrossfadeDrawable[count - 1];
-                mImagesPagerAdapter = new PreviewImagesPagerAdapter(count);
 
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mPageIndicator.setCount(count);
-                        mViewPager.setAdapter(mImagesPagerAdapter);
-                    }
-                });
-
-                List<Bitmap> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count);
+                final List<BitmapDrawable> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count, getResources());
                 for (int index = 0; index < bitmapList.size(); index++) {
-                    final Bitmap bitmap = bitmapList.get(index);
+                    final Bitmap bitmap = bitmapList.get(index).getBitmap();
 
                     if (bitmap != null && !bitmap.isRecycled()) {
                         Palette palette = Palette.from(bitmap).generate();
 
-                        Palette.Swatch darkSwatch;
-                        boolean isMuted = false;//new Random().nextBoolean();
-
-                        if (isMuted) {
+                        Palette.Swatch darkSwatch = palette.getDarkVibrantSwatch();
+                        if (darkSwatch == null) {
                             darkSwatch = palette.getDarkMutedSwatch();
-
-                            if (darkSwatch == null) {
-                                darkSwatch = palette.getDarkVibrantSwatch();
-                            }
-                        } else {
-                            darkSwatch = palette.getDarkVibrantSwatch();
-
-                            if (darkSwatch == null) {
-                                darkSwatch = palette.getDarkMutedSwatch();
-                            }
                         }
 
-                        if (darkSwatch != null) {
-                            mSwatches[index] = darkSwatch;
-
-                            if (index == mViewPager.getCurrentItem()) {
-                                Palette.Swatch swatch = mSwatches[index];
-
-                                final int toolbarColor = swatch.getRgb();
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        mToolbarContainerFrameLayout.setBackgroundColor(toolbarColor);
-                                    }
-                                });
-                            }
+                        if(darkSwatch != null) {
+                            mSwatchesColors[index] = darkSwatch.getRgb();
+                        } else {
+                            mSwatchesColors[index] = mPanoramaCropColor;
                         }
 
                         if (index > 0) {
                             if (mCrossfadeDrawables[index - 1] == null) {
                                 mCrossfadeDrawables[index - 1] = new CrossfadeDrawable();
 
-                                Palette.Swatch baseSwatch = mSwatches[index - 1];
-                                Palette.Swatch fadingSwatch = mSwatches[index];
-
-                                int baseColor = baseSwatch != null ? baseSwatch.getRgb() : getResources().getColor(R.color.colorAccent);
-                                int fadingColor = fadingSwatch != null ? fadingSwatch.getRgb() : baseColor;
+                                int baseColor = mSwatchesColors[index - 1];
+                                int fadingColor = mSwatchesColors[index];
 
                                 mCrossfadeDrawables[index - 1].setBase(new ColorDrawable(baseColor));
                                 mCrossfadeDrawables[index - 1].setFading(new ColorDrawable(fadingColor));
                             }
                         }
-
-                        final int idx = index;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                BitmapDrawable drawable = new BitmapDrawable(getResources(), bitmap);
-
-                                mImagesPagerAdapter.updateDrawable(idx, drawable);
-                                ImageViewWithLoading imageViewWithLoading = (ImageViewWithLoading) mViewPager.findViewWithTag(idx);
-                                if (imageViewWithLoading != null) {
-                                    imageViewWithLoading.setImageDrawable(drawable);
-                                }
-                            }
-                        });
                     }
                 }
 
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        mImagesPagerAdapter = new PreviewImagesPagerAdapter<>(bitmapList);
+                        mViewPager.setAdapter(mImagesPagerAdapter);
+                        mPageIndicator.setCount(bitmapList.size());
+                        mPageIndicator.setVisibility(View.VISIBLE);
+
                         mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
                             @Override
                             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                                Log.i("onPageScrolled", position + " - " + positionOffset);
-
                                 if (position < mCrossfadeDrawables.length) {
                                     mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
                                 }
@@ -202,15 +168,6 @@ public class PreviewActivity extends BaseActivity {
 
                             @Override
                             public void onPageSelected(int position) {
-//                Palette.Swatch swatch = mSwatches[position];
-
-//                if(swatch != null) {
-//                    int toolbarColor = swatch.getRgb();
-//                    int statusBarColor = manipulateColor(swatch.getRgb(), 0.8f);
-
-//                    setStatusBarColor(statusBarColor);
-//                    mToolbar.setBackgroundColor(toolbarColor);
-//                }
                             }
 
                             @Override
@@ -218,6 +175,8 @@ public class PreviewActivity extends BaseActivity {
 
                             }
                         });
+
+                        mProgressBar.setVisibility(View.GONE);
                     }
                 });
             }
@@ -258,21 +217,7 @@ public class PreviewActivity extends BaseActivity {
 
 
     private CrossfadeDrawable getCrossfadeDrawable(int position, float positionOffset) {
-        if (mCrossfadeDrawables[position] == null) {
-            mCrossfadeDrawables[position] = new CrossfadeDrawable();
-
-            Palette.Swatch baseSwatch = mSwatches[position];
-            Palette.Swatch fadingSwatch = mSwatches[position + 1];
-
-            int baseColor = baseSwatch != null ? baseSwatch.getRgb() : getResources().getColor(R.color.colorAccent);
-            int fadingColor = fadingSwatch != null ? fadingSwatch.getRgb() : baseColor;
-
-            mCrossfadeDrawables[position].setBase(new ColorDrawable(baseColor));
-            mCrossfadeDrawables[position].setFading(new ColorDrawable(fadingColor));
-        }
-
         mCrossfadeDrawables[position].setProgress(positionOffset);
-
         return mCrossfadeDrawables[position];
     }
 
@@ -281,12 +226,10 @@ public class PreviewActivity extends BaseActivity {
      */
     private void initAppBar() {
         int toolbarColor = ContextCompat.getColor(this, R.color.colorAccent);
-        int toolbarWidgetColor = ContextCompat.getColor(this, android.R.color.white);
+        int toolbarWidgetColor = Color.WHITE;
 
         mToolbarContainerFrameLayout = (FrameLayout) findViewById(R.id.toolbar_container);
-        if (Build.VERSION.SDK_INT >= 19) {
-            mToolbarContainerFrameLayout.setPadding(mToolbarContainerFrameLayout.getPaddingLeft(), getStatusBarHeight(), mToolbarContainerFrameLayout.getPaddingRight(), mToolbarContainerFrameLayout.getPaddingBottom());
-        }
+        mToolbarContainerFrameLayout.setPadding(mToolbarContainerFrameLayout.getPaddingLeft(), getStatusBarHeight(), mToolbarContainerFrameLayout.getPaddingRight(), mToolbarContainerFrameLayout.getPaddingBottom());
         //setStatusBarColor(mStatusBarColor);
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -306,22 +249,6 @@ public class PreviewActivity extends BaseActivity {
         final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayShowTitleEnabled(false);
-        }
-    }
-
-    /**
-     * Sets status-bar color for L devices.
-     *
-     * @param color - status-bar color
-     */
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void setStatusBarColor(@ColorInt int color) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            final Window window = getWindow();
-            if (window != null) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                window.setStatusBarColor(color);
-            }
         }
     }
 
