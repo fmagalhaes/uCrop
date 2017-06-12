@@ -49,6 +49,10 @@ public class PreviewImagesPagerAdapter extends PagerAdapter {
         mDrawableArray[index] = drawable;
     }
 
+    public Drawable getDrawable(int index) {
+        return mDrawableArray[index];
+    }
+
     public void recycleAll() {
         for (Drawable drawable : mDrawableArray) {
             if(drawable instanceof BitmapDrawable) {

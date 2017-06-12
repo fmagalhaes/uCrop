@@ -3,7 +3,6 @@ package com.yalantis.ucrop;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
@@ -36,8 +35,8 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.crashlytics.android.Crashlytics;
 import com.muffin.shared.utils.AnimationUtils;
-import com.muffin.shared.utils.FileUtils;
 import com.yalantis.ucrop.callback.BitmapCropCallback;
 import com.yalantis.ucrop.callback.BitmapLoadCallback;
 import com.yalantis.ucrop.model.AspectRatio;
@@ -51,12 +50,16 @@ import com.yalantis.ucrop.view.UCropView;
 import com.yalantis.ucrop.view.widget.AspectRatioTextView;
 import com.yalantis.ucrop.view.widget.HorizontalProgressWheelView;
 
+import java.io.File;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
+
+import io.fabric.sdk.android.Fabric;
+
+import static com.muffin.shared.utils.ColorUtils.manipulateColor;
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
@@ -402,7 +405,7 @@ public class UCropActivity extends AppCompatActivity {
                         Palette.Swatch darkSwatch;
                         Palette.Swatch normalSwatch;
 
-                        boolean isMuted = new Random().nextBoolean();
+                        boolean isMuted = false;//new Random().nextBoolean();
 
                         if(isMuted) {
                             darkSwatch = palette.getDarkMutedSwatch();
@@ -443,17 +446,6 @@ public class UCropActivity extends AppCompatActivity {
 
         @Override
         public void onFailure(@NonNull Exception bitmapWorkerException) {
-        }
-
-        public int manipulateColor(int color, float factor) {
-            int a = Color.alpha(color);
-            int r = Math.round(Color.red(color) * factor);
-            int g = Math.round(Color.green(color) * factor);
-            int b = Math.round(Color.blue(color) * factor);
-            return Color.argb(a,
-                    Math.min(r, 255),
-                    Math.min(g, 255),
-                    Math.min(b, 255));
         }
     };
 
@@ -766,7 +758,18 @@ public class UCropActivity extends AppCompatActivity {
             } else if(resultCode == RESULT_CANCELED) {
                 Uri uri = data.getParcelableExtra(PreviewActivity.EXTRA_IMAGE_URI);
 
-                FileUtils.deleteDir(uri.getPath())
+                File file = new File(uri.getPath());
+                if(file.exists()) {
+                    file.delete();
+                } else {
+                    if(Fabric.isInitialized()) {
+                        Crashlytics.logException(new Exception("File doesn't exist"));
+                    }
+                }
+
+                mBlockingView.setClickable(false);
+                mShowLoader = false;
+                supportInvalidateOptionsMenu();
             }
         }
     }
