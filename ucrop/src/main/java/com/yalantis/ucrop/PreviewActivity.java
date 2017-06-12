@@ -36,6 +36,8 @@ import com.rd.PageIndicatorView;
 import com.yalantis.ucrop.adapters.PreviewImagesPagerAdapter;
 import com.yalantis.ucrop.view.ImageViewWithLoading;
 
+import java.util.List;
+
 import io.fabric.sdk.android.Fabric;
 
 /**
@@ -59,9 +61,6 @@ public class PreviewActivity extends BaseActivity {
 
     private Palette.Swatch[] mSwatches;
     private CrossfadeDrawable[] mCrossfadeDrawables;
-
-    private int mToolbarColor;
-    private int mToolbarWidgetColor;
 
     public static void launchActivityForResult(Activity activity, Uri imageToPreview, float resultAspectRatio, int imageWidth, int imageHeight, int requestCode) {
         Intent intent = new Intent(activity, PreviewActivity.class);
@@ -117,89 +116,92 @@ public class PreviewActivity extends BaseActivity {
                     }
                 });
 
-                ImageCropperManager.splitBitmap(imageBitmap, count, getResources(), new ImageCropperManager.OnDrawableCreatedListener() {
-                    @Override
-                    public void onDrawableCreated(final Drawable drawable, final int index) {
-                        if(drawable instanceof BitmapDrawable) {
-                            Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+                List<Bitmap> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count);
+                for (int index = 0; index < bitmapList.size(); index++) {
+                    final Bitmap bitmap = bitmapList.get(index);
 
-                            if (bitmap != null && !bitmap.isRecycled()) {
-                                Palette palette = Palette.from(bitmap).generate();
+                    if (bitmap != null && !bitmap.isRecycled()) {
+                        Palette palette = Palette.from(bitmap).generate();
 
-                                Palette.Swatch darkSwatch;
-                                boolean isMuted = false;//new Random().nextBoolean();
+                        Palette.Swatch darkSwatch;
+                        boolean isMuted = false;//new Random().nextBoolean();
 
-                                if(isMuted) {
-                                    darkSwatch = palette.getDarkMutedSwatch();
+                        if (isMuted) {
+                            darkSwatch = palette.getDarkMutedSwatch();
 
-                                    if(darkSwatch == null) {
-                                        darkSwatch = palette.getDarkVibrantSwatch();
-                                    }
-                                } else {
-                                    darkSwatch = palette.getDarkVibrantSwatch();
+                            if (darkSwatch == null) {
+                                darkSwatch = palette.getDarkVibrantSwatch();
+                            }
+                        } else {
+                            darkSwatch = palette.getDarkVibrantSwatch();
 
-                                    if(darkSwatch == null) {
-                                        darkSwatch = palette.getDarkMutedSwatch();
-                                    }
-                                }
-
-                                if (darkSwatch != null) {
-                                    mSwatches[index] = darkSwatch;
-
-                                    if(index == mViewPager.getCurrentItem()) {
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                Palette.Swatch swatch = mSwatches[index];
-
-                                                int toolbarColor = swatch.getRgb();
-//                                                int statusBarColor = manipulateColor(swatch.getRgb(), 0.8f);
-
-                                                mToolbarContainerFrameLayout.setBackgroundColor(toolbarColor);
-
-//                                                setStatusBarColor(statusBarColor);
-//                                                mToolbar.setBackgroundColor(toolbarColor);
-                                            }
-                                        });
-                                    }
-                                }
+                            if (darkSwatch == null) {
+                                darkSwatch = palette.getDarkMutedSwatch();
                             }
                         }
 
-                        updateUI(drawable, index);
-                    }
+                        if (darkSwatch != null) {
+                            mSwatches[index] = darkSwatch;
 
-                    protected void updateUI(final Drawable drawable, final int index) {
+                            if (index == mViewPager.getCurrentItem()) {
+                                Palette.Swatch swatch = mSwatches[index];
+
+                                final int toolbarColor = swatch.getRgb();
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mToolbarContainerFrameLayout.setBackgroundColor(toolbarColor);
+                                    }
+                                });
+                            }
+                        }
+
+                        if (index > 0) {
+                            if (mCrossfadeDrawables[index - 1] == null) {
+                                mCrossfadeDrawables[index - 1] = new CrossfadeDrawable();
+
+                                Palette.Swatch baseSwatch = mSwatches[index - 1];
+                                Palette.Swatch fadingSwatch = mSwatches[index];
+
+                                int baseColor = baseSwatch != null ? baseSwatch.getRgb() : getResources().getColor(R.color.colorAccent);
+                                int fadingColor = fadingSwatch != null ? fadingSwatch.getRgb() : baseColor;
+
+                                mCrossfadeDrawables[index - 1].setBase(new ColorDrawable(baseColor));
+                                mCrossfadeDrawables[index - 1].setFading(new ColorDrawable(fadingColor));
+                            }
+                        }
+
+                        final int idx = index;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                mImagesPagerAdapter.updateDrawable(index, drawable);
+                                BitmapDrawable drawable = new BitmapDrawable(getResources(), bitmap);
 
-                                ImageViewWithLoading imageViewWithLoading = (ImageViewWithLoading) mViewPager.findViewWithTag(index);
-
+                                mImagesPagerAdapter.updateDrawable(idx, drawable);
+                                ImageViewWithLoading imageViewWithLoading = (ImageViewWithLoading) mViewPager.findViewWithTag(idx);
                                 if (imageViewWithLoading != null) {
                                     imageViewWithLoading.setImageDrawable(drawable);
                                 }
                             }
                         });
                     }
-                });
-            }
-        }).start();
-
-
-        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                Log.i("onPageScrolled", position + " - " + positionOffset);
-
-                if(position < mCrossfadeDrawables.length) {
-                    mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
                 }
-            }
 
-            @Override
-            public void onPageSelected(int position) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+                            @Override
+                            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                                Log.i("onPageScrolled", position + " - " + positionOffset);
+
+                                if (position < mCrossfadeDrawables.length) {
+                                    mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
+                                }
+                            }
+
+                            @Override
+                            public void onPageSelected(int position) {
 //                Palette.Swatch swatch = mSwatches[position];
 
 //                if(swatch != null) {
@@ -209,13 +211,17 @@ public class PreviewActivity extends BaseActivity {
 //                    setStatusBarColor(statusBarColor);
 //                    mToolbar.setBackgroundColor(toolbarColor);
 //                }
-            }
+                            }
 
-            @Override
-            public void onPageScrollStateChanged(int state) {
+                            @Override
+                            public void onPageScrollStateChanged(int state) {
 
+                            }
+                        });
+                    }
+                });
             }
-        });
+        }).start();
     }
 
     private void setResultUriOk() {
@@ -229,8 +235,8 @@ public class PreviewActivity extends BaseActivity {
     private void setResultUriFromIntent(int resultCode) {
         Intent intent = getIntent();
 
-        if(!intent.hasExtra(EXTRA_RESULT_ASPECT_RATIO) || !intent.hasExtra(EXTRA_IMAGE_WIDTH) || !intent.hasExtra(EXTRA_IMAGE_HEIGHT)) {
-            if(Fabric.isInitialized()) {
+        if (!intent.hasExtra(EXTRA_RESULT_ASPECT_RATIO) || !intent.hasExtra(EXTRA_IMAGE_WIDTH) || !intent.hasExtra(EXTRA_IMAGE_HEIGHT)) {
+            if (Fabric.isInitialized()) {
                 Crashlytics.logException(new RuntimeException("intent doesn't have all extras!"));
             }
         }
@@ -251,9 +257,8 @@ public class PreviewActivity extends BaseActivity {
     }
 
 
-
     private CrossfadeDrawable getCrossfadeDrawable(int position, float positionOffset) {
-        if(mCrossfadeDrawables[position] == null) {
+        if (mCrossfadeDrawables[position] == null) {
             mCrossfadeDrawables[position] = new CrossfadeDrawable();
 
             Palette.Swatch baseSwatch = mSwatches[position];
@@ -275,27 +280,27 @@ public class PreviewActivity extends BaseActivity {
      * Configures and styles both status bar and toolbar.
      */
     private void initAppBar() {
-        mToolbarColor = ContextCompat.getColor(this, R.color.colorAccent);
-        mToolbarWidgetColor = ContextCompat.getColor(this, android.R.color.white);
+        int toolbarColor = ContextCompat.getColor(this, R.color.colorAccent);
+        int toolbarWidgetColor = ContextCompat.getColor(this, android.R.color.white);
 
         mToolbarContainerFrameLayout = (FrameLayout) findViewById(R.id.toolbar_container);
-        mToolbarContainerFrameLayout.setPadding(mToolbarContainerFrameLayout.getPaddingLeft(), getStatusBarHeight(), mToolbarContainerFrameLayout.getPaddingRight(), mToolbarContainerFrameLayout.getPaddingBottom());
+        if (Build.VERSION.SDK_INT >= 19) {
+            mToolbarContainerFrameLayout.setPadding(mToolbarContainerFrameLayout.getPaddingLeft(), getStatusBarHeight(), mToolbarContainerFrameLayout.getPaddingRight(), mToolbarContainerFrameLayout.getPaddingBottom());
+        }
         //setStatusBarColor(mStatusBarColor);
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
 
         // Set all of the Toolbar coloring
-        mToolbarContainerFrameLayout.setBackgroundColor(mToolbarColor);
-        mToolbar.setTitleTextColor(mToolbarWidgetColor);
+        mToolbarContainerFrameLayout.setBackgroundColor(toolbarColor);
+        mToolbar.setTitleTextColor(toolbarWidgetColor);
 
         final TextView toolbarTitle = (TextView) mToolbar.findViewById(R.id.toolbar_title);
-        toolbarTitle.setTextColor(mToolbarWidgetColor);
+        toolbarTitle.setTextColor(toolbarWidgetColor);
         toolbarTitle.setText(getString(R.string.label_preview_photo));
 
         // Color buttons inside the Toolbar
-        Drawable stateButtonDrawable = ContextCompat.getDrawable(this, R.drawable.ucrop_ic_cross).mutate();
-        stateButtonDrawable.setColorFilter(mToolbarWidgetColor, PorterDuff.Mode.SRC_ATOP);
-        mToolbar.setNavigationIcon(stateButtonDrawable);
+        mToolbar.setNavigationIcon(ContextCompat.getDrawable(this, R.drawable.ic_action_arrow_back));
 
         setSupportActionBar(mToolbar);
         final ActionBar actionBar = getSupportActionBar();
