@@ -16,6 +16,7 @@ import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.muffin.shared.models.Resolution;
 import com.yalantis.ucrop.callback.BitmapLoadCallback;
 import com.yalantis.ucrop.model.ExifInfo;
 import com.yalantis.ucrop.util.BitmapLoadUtils;
@@ -50,6 +51,7 @@ public class BitmapLoadTask extends AsyncTask<Void, Void, BitmapLoadTask.BitmapW
     private Uri mOutputUri;
     private final int mRequiredWidth;
     private final int mRequiredHeight;
+    private final boolean mForceInstagramSize;
 
     private final BitmapLoadCallback mBitmapLoadCallback;
 
@@ -74,11 +76,20 @@ public class BitmapLoadTask extends AsyncTask<Void, Void, BitmapLoadTask.BitmapW
                           @NonNull Uri inputUri, @Nullable Uri outputUri,
                           int requiredWidth, int requiredHeight,
                           BitmapLoadCallback loadCallback) {
+        this(context, inputUri, outputUri, requiredWidth, requiredHeight, false, loadCallback);
+    }
+
+    public BitmapLoadTask(@NonNull Context context,
+                          @NonNull Uri inputUri, @Nullable Uri outputUri,
+                          int requiredWidth, int requiredHeight,
+                          boolean forceInstagramSize,
+                          BitmapLoadCallback loadCallback) {
         mContext = context;
         mInputUri = inputUri;
         mOutputUri = outputUri;
         mRequiredWidth = requiredWidth;
         mRequiredHeight = requiredHeight;
+        mForceInstagramSize = forceInstagramSize;
         mBitmapLoadCallback = loadCallback;
     }
 
@@ -125,7 +136,13 @@ public class BitmapLoadTask extends AsyncTask<Void, Void, BitmapLoadTask.BitmapW
         while (!decodeAttemptSuccess) {
             try {
                 decodeSampledBitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
-                decodeAttemptSuccess = true;
+                if(mForceInstagramSize) {
+                    if(new Resolution(decodeSampledBitmap).isInstagramSquareResolutionSupported()) {
+                        decodeAttemptSuccess = true;
+                    }
+                } else {
+                    decodeAttemptSuccess = true;
+                }
             } catch (OutOfMemoryError error) {
                 Log.e(TAG, "doInBackground: BitmapFactory.decodeFileDescriptor: ", error);
                 options.inSampleSize *= 2;

@@ -34,7 +34,16 @@ public class BitmapLoadUtils {
                                                 int requiredWidth, int requiredHeight,
                                                 BitmapLoadCallback loadCallback) {
 
-        new BitmapLoadTask(context, uri, outputUri, requiredWidth, requiredHeight, loadCallback).execute();
+        decodeBitmapInBackground(context, uri, outputUri, requiredWidth, requiredHeight, false, loadCallback);
+    }
+
+    public static void decodeBitmapInBackground(@NonNull Context context,
+                                                @NonNull Uri uri, @Nullable Uri outputUri,
+                                                int requiredWidth, int requiredHeight,
+                                                boolean forceInstagramSize,
+                                                BitmapLoadCallback loadCallback) {
+
+        new BitmapLoadTask(context, uri, outputUri, requiredWidth, requiredHeight, forceInstagramSize, loadCallback).execute();
     }
 
     public static Bitmap transformBitmap(@NonNull Bitmap bitmap, @NonNull Matrix transformMatrix) {

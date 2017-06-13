@@ -1,6 +1,7 @@
 package com.yalantis.ucrop;
 
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
@@ -118,112 +119,130 @@ public class PreviewActivity extends BaseActivity {
         System.gc();
         mProgressBar.setVisibility(View.VISIBLE);
         Resolution resolution = BitmapUtils.getResolutionOfBitmapUri(mImageToPreviewUri);
-        int squaresCount = ImageCropperManager.getSquareWidthCountForResolution(resolution);
+        int squaresCount = resolution.getSquaresCount();
         int maxBitmapSize = Math.min(getMaxBitmapSize(), getScreenWidth()) * squaresCount;
-        BitmapLoadUtils.decodeBitmapInBackground(this, mImageToPreviewUri, mImageToPreviewUri, maxBitmapSize, maxBitmapSize, new BitmapLoadCallback() {
-            @Override
-            public void onBitmapLoaded(final @NonNull Bitmap imageBitmap, @NonNull ExifInfo exifInfo, @NonNull String imageInputPath, @Nullable String imageOutputPath) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Resolution imageResolution = new Resolution(imageBitmap);
 
-                        int count = ImageCropperManager.getSquareWidthCountForResolution(imageResolution);
+        if(resolution.isInstagramSquareResolutionSupported()) {
+            BitmapLoadUtils.decodeBitmapInBackground(this, mImageToPreviewUri, mImageToPreviewUri, maxBitmapSize, maxBitmapSize, false, new BitmapLoadCallback() {
+                @Override
+                public void onBitmapLoaded(final @NonNull Bitmap imageBitmap, @NonNull ExifInfo exifInfo, @NonNull String imageInputPath, @Nullable String imageOutputPath) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Resolution imageResolution = new Resolution(imageBitmap);
 
-                        mSwatchesColors = new int[count];
-                        mCrossfadeDrawables = new CrossfadeDrawable[count - 1];
+                            int count = imageResolution.getSquaresCount();
 
-                        try {
-                            final List<BitmapDrawable> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count, getResources());
-                            for (int index = 0; index < bitmapList.size(); index++) {
-                                final Bitmap bitmap = bitmapList.get(index).getBitmap();
+                            mSwatchesColors = new int[count];
+                            mCrossfadeDrawables = new CrossfadeDrawable[count - 1];
 
-                                if (bitmap != null && !bitmap.isRecycled()) {
-                                    Palette palette = Palette.from(bitmap).generate();
+                            try {
+                                final List<BitmapDrawable> bitmapList = ImageCropperManager.splitBitmap(imageBitmap, count, getResources());
+                                for (int index = 0; index < bitmapList.size(); index++) {
+                                    final Bitmap bitmap = bitmapList.get(index).getBitmap();
 
-                                    Palette.Swatch darkSwatch = palette.getDarkVibrantSwatch();
-                                    if (darkSwatch == null) {
-                                        darkSwatch = palette.getDarkMutedSwatch();
-                                    }
+                                    if (bitmap != null && !bitmap.isRecycled()) {
+                                        Palette palette = Palette.from(bitmap).generate();
 
-                                    if(darkSwatch != null) {
-                                        mSwatchesColors[index] = darkSwatch.getRgb();
-                                    } else {
-                                        mSwatchesColors[index] = mPanoramaCropColor;
-                                    }
-
-                                    if (index > 0) {
-                                        if (mCrossfadeDrawables[index - 1] == null) {
-                                            mCrossfadeDrawables[index - 1] = new CrossfadeDrawable();
-
-                                            int baseColor = mSwatchesColors[index - 1];
-                                            int fadingColor = mSwatchesColors[index];
-
-                                            mCrossfadeDrawables[index - 1].setBase(new ColorDrawable(baseColor));
-                                            mCrossfadeDrawables[index - 1].setFading(new ColorDrawable(fadingColor));
+                                        Palette.Swatch darkSwatch = palette.getDarkVibrantSwatch();
+                                        if (darkSwatch == null) {
+                                            darkSwatch = palette.getDarkMutedSwatch();
                                         }
-                                    }
-                                }
-                            }
 
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    mImagesPagerAdapter = new PreviewImagesPagerAdapter<>(bitmapList);
-                                    mViewPager.setAdapter(mImagesPagerAdapter);
-                                    mPageIndicator.setCount(bitmapList.size());
-                                    mPageIndicator.setVisibility(View.VISIBLE);
+                                        if(darkSwatch != null) {
+                                            mSwatchesColors[index] = darkSwatch.getRgb();
+                                        } else {
+                                            mSwatchesColors[index] = mPanoramaCropColor;
+                                        }
 
-                                    mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-                                        @Override
-                                        public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                                            if (position < mCrossfadeDrawables.length) {
-                                                mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
+                                        if (index > 0) {
+                                            if (mCrossfadeDrawables[index - 1] == null) {
+                                                mCrossfadeDrawables[index - 1] = new CrossfadeDrawable();
+
+                                                int baseColor = mSwatchesColors[index - 1];
+                                                int fadingColor = mSwatchesColors[index];
+
+                                                mCrossfadeDrawables[index - 1].setBase(new ColorDrawable(baseColor));
+                                                mCrossfadeDrawables[index - 1].setFading(new ColorDrawable(fadingColor));
                                             }
                                         }
-
-                                        @Override
-                                        public void onPageSelected(int position) {
-                                        }
-
-                                        @Override
-                                        public void onPageScrollStateChanged(int state) {
-
-                                        }
-                                    });
-
-                                    mProgressBar.setVisibility(View.GONE);
+                                    }
                                 }
-                            });
-                        } catch (OutOfMemoryError e) {
-                            if(Fabric.isInitialized()) {
-                                Crashlytics.logException(e);
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mImagesPagerAdapter = new PreviewImagesPagerAdapter<>(bitmapList);
+                                        mViewPager.setAdapter(mImagesPagerAdapter);
+                                        mPageIndicator.setCount(bitmapList.size());
+                                        mPageIndicator.setVisibility(View.VISIBLE);
+
+                                        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+                                            @Override
+                                            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                                                if (position < mCrossfadeDrawables.length) {
+                                                    mToolbarContainerFrameLayout.setBackground(getCrossfadeDrawable(position, positionOffset));
+                                                }
+                                            }
+
+                                            @Override
+                                            public void onPageSelected(int position) {
+                                            }
+
+                                            @Override
+                                            public void onPageScrollStateChanged(int state) {
+
+                                            }
+                                        });
+
+                                        mProgressBar.setVisibility(View.GONE);
+                                    }
+                                });
+                            } catch (OutOfMemoryError e) {
+                                if(Fabric.isInitialized()) {
+                                    Crashlytics.logException(e);
+                                }
+
+                                mProgressBar.setVisibility(View.GONE);
+
+                                Toast.makeText(PreviewActivity.this, getString(R.string.dialog_error_message_outofmemoryerror), Toast.LENGTH_SHORT).show();
+
+                                setResultUriOk();
+                                finish();
+                                AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
                             }
-
-                            Toast.makeText(PreviewActivity.this, getString(R.string.dialog_error_message_outofmemoryerror), Toast.LENGTH_SHORT).show();
-
-                            setResultUriOk();
-                            finish();
-                            AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
                         }
-                    }
-                }).start();
-            }
-
-            @Override
-            public void onFailure(@NonNull Exception bitmapWorkerException) {
-                if(Fabric.isInitialized()) {
-                    Crashlytics.logException(bitmapWorkerException);
+                    }).start();
                 }
 
-                //TODO: Show Error!
-                mProgressBar.setVisibility(View.GONE);
+                @Override
+                public void onFailure(@NonNull Exception bitmapWorkerException) {
+                    if(Fabric.isInitialized()) {
+                        Crashlytics.logException(bitmapWorkerException);
+                    }
 
-                setResultUriOk();
-                finish();
-                AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
-            }
-        });
+                    mProgressBar.setVisibility(View.GONE);
+
+                    //TODO: Show Error! (or continue silently?)
+                    Toast.makeText(PreviewActivity.this, getString(R.string.dialog_error_message_outofmemoryerror), Toast.LENGTH_SHORT).show();
+
+                    setResultUriOk();
+                    finish();
+                    AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
+                }
+            });
+        } else {
+            mProgressBar.setVisibility(View.GONE);
+
+            showInvalidInputErrorDialog(new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    setResultUriCanceled();
+                    finish();
+                    AnimationUtils.overridePendingTransitionForFinishActivity(PreviewActivity.this);
+                }
+            });
+        }
     }
 
     private void setResultUriOk() {
